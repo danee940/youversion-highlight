@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Bible Highlights</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: #f9f6f0;
+      color: #2c2c2c;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      right: 0;
+      padding: 1rem 1.5rem;
+      font-family: sans-serif;
+      font-size: 0.85rem;
+    }
+
+    header a {
+      color: #888;
+      text-decoration: none;
+    }
+
+    header a:hover {
+      color: #333;
+    }
+
+    .container {
+      max-width: 640px;
+      width: 100%;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: normal;
+      color: #888;
+      margin-bottom: 2.5rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-family: sans-serif;
+      font-size: 0.8rem;
+    }
+
+    #card {
+      background: #fff;
+      border-radius: 4px;
+      padding: 2.5rem 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      border-left: 5px solid #ccc;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      transition: border-color 0.3s ease;
+      text-align: left;
+    }
+
+    #verse-text {
+      font-size: 1.25rem;
+      line-height: 1.7;
+      margin-bottom: 1rem;
+      color: #1a1a1a;
+    }
+
+    #verse-ref {
+      font-family: sans-serif;
+      font-size: 0.8rem;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    #verse-date {
+      font-family: sans-serif;
+      font-size: 0.75rem;
+      color: #ccc;
+      margin-top: 0.4rem;
+    }
+
+    #placeholder {
+      color: #bbb;
+      font-size: 1rem;
+      font-style: italic;
+    }
+
+    button#random-btn {
+      background: #2c2c2c;
+      color: #fff;
+      border: none;
+      padding: 0.85rem 2rem;
+      font-size: 0.9rem;
+      font-family: sans-serif;
+      border-radius: 3px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: background 0.2s;
+    }
+
+    button#random-btn:hover {
+      background: #444;
+    }
+
+    button#random-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .signin-prompt {
+      text-align: center;
+    }
+
+    #token-status {
+      position: fixed;
+      top: 0;
+      right: 0;
+      padding: 0.75rem 1.25rem;
+      font-family: sans-serif;
+      font-size: 0.75rem;
+      color: #bbb;
+    }
+
+    #token-status a {
+      color: #c0392b;
+      text-decoration: none;
+    }
+
+    #error-msg {
+      color: #c0392b;
+      font-family: sans-serif;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="token-status"></div>
+
+  <div class="container">
+    <h1>My Highlights</h1>
+    <div id="card">
+      <div id="placeholder">Press the button to get a random highlight.</div>
+      <div id="verse-text" style="display:none"></div>
+      <div id="verse-ref" style="display:none"></div>
+      <div id="verse-date" style="display:none"></div>
+    </div>
+    <button id="random-btn" onclick="loadRandom()">Random highlight</button>
+    <div id="error-msg"></div>
+  </div>
+
+  <script>
+    async function loadRandom() {
+      const btn = document.getElementById('random-btn');
+      const verseText = document.getElementById('verse-text');
+      const verseRef = document.getElementById('verse-ref');
+      const verseDate = document.getElementById('verse-date');
+      const placeholder = document.getElementById('placeholder');
+      const errorMsg = document.getElementById('error-msg');
+      const card = document.getElementById('card');
+
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+      errorMsg.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/random');
+        const data = await res.json();
+
+        if (res.status === 401) {
+          errorMsg.innerHTML = 'Token expired. <a href="/refresh">Refresh it here</a>.';
+          errorMsg.style.display = 'block';
+          return;
+        }
+
+        if (data.error) {
+          errorMsg.textContent = data.error;
+          errorMsg.style.display = 'block';
+          return;
+        }
+
+        const color = data.color ? '#' + data.color : '#f9d84a';
+        card.style.borderColor = color;
+        placeholder.style.display = 'none';
+        verseText.textContent = data.text || '(verse text unavailable)';
+        verseText.style.display = 'block';
+        verseRef.textContent = (data.reference || data.passage_id) + (data.translation ? ' · ' + data.translation : '');
+        verseRef.style.display = 'block';
+        if (data.date) {
+          verseDate.textContent = data.date;
+          verseDate.style.display = 'block';
+        } else {
+          verseDate.style.display = 'none';
+        }
+
+      } catch (err) {
+        errorMsg.textContent = 'Something went wrong. Please try again.';
+        errorMsg.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Random highlight';
+      }
+    }
+
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        const el = document.getElementById('token-status');
+        if (data.expired) {
+          el.innerHTML = 'Token expired — <a href="/refresh">refresh</a>';
+        } else {
+          el.textContent = 'Token valid for ' + data.expires_in;
+        }
+      } catch { }
+    }
+
+    loadStatus();
+  </script>
+</body>
+
+</html>

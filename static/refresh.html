@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Refresh Token</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 4rem auto;
+      padding: 1rem;
+      color: #333;
+    }
+
+    h2 {
+      font-weight: normal;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: #666;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    ol {
+      color: #555;
+      font-size: 0.9rem;
+      line-height: 2;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      padding: 0.5rem;
+      box-sizing: border-box;
+    }
+
+    button {
+      margin-top: 0.75rem;
+      padding: 0.6rem 1.5rem;
+      background: #2c2c2c;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    button:hover {
+      background: #444;
+    }
+
+    #expired-msg {
+      color: #c0392b;
+      display: none;
+    }
+
+    #expiry-info {
+      color: #999;
+    }
+
+    .back {
+      font-size: 0.8rem;
+      color: #999;
+      margin-top: 1rem;
+    }
+
+    .back a {
+      color: #999;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Refresh YVA Token</h2>
+  <p id="expired-msg">Your token has expired. Paste a new one below.</p>
+  <p>Current token expires: <strong id="expiry-info">loading...</strong></p>
+  <ol>
+    <li>Go to <a href="https://www.bible.com" target="_blank">bible.com</a> and make sure you're signed in</li>
+    <li>Open DevTools → Application → Cookies → <code>www.bible.com</code></li>
+    <li>Copy the value of the <code>yva</code> cookie</li>
+    <li>Paste it below</li>
+  </ol>
+  <form method="POST">
+    <textarea name="token" placeholder="Paste yva cookie value here..."></textarea><br />
+    <button type="submit">Update token</button>
+  </form>
+  <p class="back"><a href="/">← Back</a></p>
+
+  <script>
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        document.getElementById('expiry-info').textContent = data.expires_at
+          ? new Date(data.expires_at).toLocaleString()
+          : 'unknown';
+        if (data.expired) {
+          document.getElementById('expired-msg').style.display = 'block';
+        }
+      } catch {
+        document.getElementById('expiry-info').textContent = 'unknown';
+      }
+    }
+
+    loadStatus();
+  </script>
+</body>
+
+</html>
