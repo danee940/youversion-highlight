@@ -1,2 +1,40 @@
-.env
+# Binary
 bible-highlight
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build/test artifacts
+*.test
+*.out
+*.prof
+coverage.txt
+coverage.html
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.editorconfig.local
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V8
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# AI / tooling artifacts
+.playwright-mcp/
+.kilo/
