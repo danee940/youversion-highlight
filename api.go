@@ -196,24 +196,32 @@ type nextData struct {
 }
 
 var nextDataRe = regexp.MustCompile(`(?s)<script id="__NEXT_DATA__" type="application/json">(.+?)</script>`)
-var verseBoundaryRe = regexp.MustCompile(`(?s)<span class="verse[^"]*" data-usfm="([^"]+)"[^>]*>(.*?)(?=<span class="verse|$)`)
+var verseOpenRe = regexp.MustCompile(`<span class="verse[^"]*" data-usfm="([^"]+)"[^>]*>`)
 var labelRe = regexp.MustCompile(`(?s)<span class="label">[^<]*`)
 
 func parseVersesFromHTML(content string) []nextDataVerse {
 	content = html.UnescapeString(content)
-	matches := verseBoundaryRe.FindAllStringSubmatch(content, -1)
 
-	type fragment struct{ usfm, text string }
+	indices := verseOpenRe.FindAllStringSubmatchIndex(content, -1)
+
 	fragsByUSFM := make(map[string][]string)
 	var usfmOrder []string
 
-	for _, m := range matches {
-		inner := labelRe.ReplaceAllString(m[2], "")
+	for i, loc := range indices {
+		usfmRaw := content[loc[2]:loc[3]]
+		var segment string
+		if i+1 < len(indices) {
+			segment = content[loc[1]:indices[i+1][0]]
+		} else {
+			segment = content[loc[1]:]
+		}
+
+		inner := labelRe.ReplaceAllString(segment, "")
 		text := strings.TrimSpace(stripHTML(inner))
 		if text == "" {
 			continue
 		}
-		for _, usfm := range strings.Fields(m[1]) {
+		for _, usfm := range strings.Fields(usfmRaw) {
 			if _, seen := fragsByUSFM[usfm]; !seen {
 				usfmOrder = append(usfmOrder, usfm)
 			}
