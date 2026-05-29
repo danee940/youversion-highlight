@@ -199,7 +199,7 @@ var nextDataRe = regexp.MustCompile(`(?s)<script id="__NEXT_DATA__" type="applic
 var verseOpenRe = regexp.MustCompile(`<span class="verse[^"]*" data-usfm="([^"]+)"[^>]*>`)
 var labelRe = regexp.MustCompile(`(?s)<span class="label">[^<]*`)
 var noteOpenRe = regexp.MustCompile(`<span class="note[^"]*"[^>]*>`)
-var sectionHeadingRe = regexp.MustCompile(`(?s)<div class="s"[^>]*>.*?</div>`)
+var interVerseBlockRe = regexp.MustCompile(`(?s)<div class="s[^"]*"[^>]*>.*?</div>|<div class="r"[^>]*>.*?</div>`)
 
 func removeNestedSpans(s string, openRe *regexp.Regexp) string {
 	var result strings.Builder
@@ -235,7 +235,7 @@ func removeNestedSpans(s string, openRe *regexp.Regexp) string {
 
 func parseVersesFromHTML(content string) []nextDataVerse {
 	content = html.UnescapeString(content)
-	content = sectionHeadingRe.ReplaceAllString(content, "")
+	content = interVerseBlockRe.ReplaceAllString(content, "")
 	content = removeNestedSpans(content, noteOpenRe)
 
 	indices := verseOpenRe.FindAllStringSubmatchIndex(content, -1)

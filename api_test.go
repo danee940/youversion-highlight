@@ -141,6 +141,28 @@ func TestParseVersesFromHTML_stripsSectionHeadings(t *testing.T) {
 	}
 }
 
+func TestParseVersesFromHTML_stripsParallelRefs(t *testing.T) {
+	content := `<span class="verse v31" data-usfm="MRK.10.31"><span class="label">31</span><span class="content">Many who are first will be last</span></span>` +
+		`</div><div class="s"><span class="heading">Next Section</span></div><div class="r"><span class="heading">(Mt 20,17–19; Lk 18,31–34)</span></div><div class="p">` +
+		`<span class="verse v32" data-usfm="MRK.10.32"><span class="label">32</span><span class="content">They were on the way</span></span>`
+	verses := parseVersesFromHTML(content)
+	var v31 *nextDataVerse
+	for i := range verses {
+		if verses[i].USFM == "MRK.10.31" {
+			v31 = &verses[i]
+		}
+	}
+	if v31 == nil {
+		t.Fatal("MRK.10.31 not found in parsed verses")
+	}
+	if strings.Contains(v31.Content, "Mt 20") || strings.Contains(v31.Content, "Lk 18") {
+		t.Errorf("verse 31 content %q contains parallel reference text", v31.Content)
+	}
+	if !strings.Contains(v31.Content, "Many who are first") {
+		t.Errorf("verse 31 content %q missing expected text", v31.Content)
+	}
+}
+
 func TestRemoveNestedSpans_removesMatchingSpan(t *testing.T) {
 	input := `before<span class="note x"><span class="label">#</span><span class="body">ref</span></span>after`
 	got := removeNestedSpans(input, noteOpenRe)
