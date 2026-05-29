@@ -181,13 +181,18 @@ func handleExport(w http.ResponseWriter, r *http.Request) {
 		if h.Translation != "" {
 			ref += " — " + h.Translation
 		}
-		sb.WriteString("## " + ref + "\n")
+		sb.WriteString("## ")
+		sb.WriteString(ref)
+		sb.WriteString("\n")
 		if h.Date != "" {
-			sb.WriteString("*" + h.Date + "*\n")
+			sb.WriteString("*")
+			sb.WriteString(h.Date)
+			sb.WriteString("*\n")
 		}
 		sb.WriteString("\n")
 		if h.Text != "" {
-			sb.WriteString(h.Text + "\n")
+			sb.WriteString(h.Text)
+			sb.WriteString("\n")
 		} else {
 			sb.WriteString("*(verse text unavailable)*\n")
 		}
