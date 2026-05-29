@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,6 +77,7 @@ func main() {
 	mux.HandleFunc("/", handleIndex)
 	mux.HandleFunc("/api/random", handleRandom)
 	mux.HandleFunc("/api/status", handleStatus)
+	mux.HandleFunc("/api/export", handleExport)
 	mux.HandleFunc("/refresh", handleRefresh)
 
 	log.Printf("Listening on http://localhost:%s", port)
@@ -148,6 +150,54 @@ func handleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeFile(w, r, "static/refresh.html")
+}
+
+func handleExport(w http.ResponseWriter, r *http.Request) {
+	yva, userID, exp := state.get()
+	if tokenIsExpired(exp) {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{
+			"error":       "token expired",
+			"refresh_url": "/refresh",
+		})
+		return
+	}
+
+	lastPage := state.getLastPage()
+	if lastPage < 1 {
+		lastPage = 1
+	}
+
+	highlights, err := fetchAllHighlights(yva, userID, lastPage)
+	if err != nil {
+		log.Printf("export: error fetching highlights: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	var sb strings.Builder
+	sb.WriteString("# Bible Highlights\n\n")
+	for _, h := range highlights {
+		ref := h.Reference
+		if h.Translation != "" {
+			ref += " — " + h.Translation
+		}
+		sb.WriteString("## " + ref + "\n")
+		if h.Date != "" {
+			sb.WriteString("*" + h.Date + "*\n")
+		}
+		sb.WriteString("\n")
+		if h.Text != "" {
+			sb.WriteString(h.Text + "\n")
+		} else {
+			sb.WriteString("*(verse text unavailable)*\n")
+		}
+		sb.WriteString("\n---\n\n")
+	}
+
+	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"highlights.md\"")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, sb.String())
 }
 
 func handleRandom(w http.ResponseWriter, r *http.Request) {

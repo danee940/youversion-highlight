@@ -358,12 +358,7 @@ func fetchVerseText(yva string, versionID int, usfms []string) (string, string, 
 	return "", "", fmt.Errorf("verse not found in page")
 }
 
-func enrichHighlight(yva, userID string, lastPage int) (*enrichedHighlight, error) {
-	m, err := fetchRandomHighlight(yva, userID, lastPage)
-	if err != nil {
-		return nil, err
-	}
-
+func momentToEnrichedHighlight(yva string, m *moment) (*enrichedHighlight, error) {
 	if len(m.Extras.References) == 0 {
 		return nil, fmt.Errorf("highlight has no references")
 	}
@@ -413,4 +408,36 @@ func enrichHighlight(yva, userID string, lastPage int) (*enrichedHighlight, erro
 		Text:        text,
 		Date:        date,
 	}, nil
+}
+
+func fetchAllHighlights(yva, userID string, lastPage int) ([]enrichedHighlight, error) {
+	if lastPage < 1 {
+		lastPage = 1
+	}
+	var highlights []enrichedHighlight
+	for page := 1; page <= lastPage; page++ {
+		resp, err := fetchHighlightsPage(yva, userID, page)
+		if err != nil {
+			log.Printf("fetchAllHighlights: page %d failed: %v", page, err)
+			continue
+		}
+		for i := range resp.Response.Data.Moments {
+			m := &resp.Response.Data.Moments[i]
+			h, err := momentToEnrichedHighlight(yva, m)
+			if err != nil {
+				log.Printf("fetchAllHighlights: skipping moment: %v", err)
+				continue
+			}
+			highlights = append(highlights, *h)
+		}
+	}
+	return highlights, nil
+}
+
+func enrichHighlight(yva, userID string, lastPage int) (*enrichedHighlight, error) {
+	m, err := fetchRandomHighlight(yva, userID, lastPage)
+	if err != nil {
+		return nil, err
+	}
+	return momentToEnrichedHighlight(yva, m)
 }
