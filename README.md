@@ -2,6 +2,8 @@
 
 A personal web app that surfaces random Bible verse highlights from your [YouVersion](https://www.bible.com) account.
 
+![Screenshot](docs/screenshot.png)
+
 ## How it works
 
 Fetches your highlights from the YouVersion API and displays a random one each time you click the button. The verse text is scraped from bible.com and the highlight color is preserved as a card accent.
