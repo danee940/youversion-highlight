@@ -181,27 +181,40 @@ func stripHTML(s string) string {
 }
 
 type nextDataVerse struct {
-	Reference struct {
-		Human string   `json:"human"`
-		USFM  []string `json:"usfm"`
-	} `json:"reference"`
-	Content string `json:"content"`
-}
-
-type nextDataProps struct {
-	Verses []nextDataVerse `json:"verses"`
+	USFM    string
+	Content string
 }
 
 type nextData struct {
 	Props struct {
-		PageProps nextDataProps `json:"pageProps"`
+		PageProps struct {
+			ChapterInfo struct {
+				Content string `json:"content"`
+			} `json:"chapterInfo"`
+		} `json:"pageProps"`
 	} `json:"props"`
 }
 
 var nextDataRe = regexp.MustCompile(`(?s)<script id="__NEXT_DATA__" type="application/json">(.+?)</script>`)
+var verseRe = regexp.MustCompile(`(?s)<span class="verse[^"]*" data-usfm="([^"]+)"[^>]*>.*?<span class="content">(.*?)</span>`)
+var labelRe = regexp.MustCompile(`<span class="label">[^<]*</span>`)
+
+func parseVersesFromHTML(content string) []nextDataVerse {
+	content = html.UnescapeString(content)
+	matches := verseRe.FindAllStringSubmatch(content, -1)
+	verses := make([]nextDataVerse, 0, len(matches))
+	for _, m := range matches {
+		text := labelRe.ReplaceAllString(m[2], "")
+		verses = append(verses, nextDataVerse{
+			USFM:    m[1],
+			Content: strings.TrimSpace(text),
+		})
+	}
+	return verses
+}
 
 func fetchPageVerses(yva string, versionID int, usfm string) ([]nextDataVerse, error) {
-	pageURL := fmt.Sprintf("https://www.bible.com/bible/%d/%s", versionID, usfm)
+	pageURL := fmt.Sprintf("https://www.bible.com/bible/%d/%s", versionID, chapterKey(usfm))
 
 	req, err := http.NewRequest(http.MethodGet, pageURL, nil)
 	if err != nil {
@@ -231,7 +244,8 @@ func fetchPageVerses(yva string, versionID int, usfm string) ([]nextDataVerse, e
 		return nil, fmt.Errorf("parsing __NEXT_DATA__: %w", err)
 	}
 
-	return nd.Props.PageProps.Verses, nil
+	verses := parseVersesFromHTML(nd.Props.PageProps.ChapterInfo.Content)
+	return verses, nil
 }
 
 func chapterKey(usfm string) string {
@@ -262,7 +276,6 @@ func fetchVerseText(yva string, versionID int, usfms []string) (string, string, 
 		}
 	}
 
-	var humanRef string
 	var textParts []string
 
 	for _, chapterUSFM := range chapterUSFMs {
@@ -271,28 +284,14 @@ func fetchVerseText(yva string, versionID int, usfms []string) (string, string, 
 			return "", "", err
 		}
 		for _, v := range verses {
-			for _, u := range v.Reference.USFM {
-				if usfmSet[u] {
-					if humanRef == "" {
-						humanRef = v.Reference.Human
-					}
-					textParts = append(textParts, stripHTML(v.Content))
-					break
-				}
+			if usfmSet[v.USFM] {
+				textParts = append(textParts, v.Content)
 			}
 		}
 	}
 
 	if len(textParts) > 0 {
-		return humanRef, strings.Join(textParts, " "), nil
-	}
-
-	verses, err := fetchPageVerses(yva, versionID, usfms[0])
-	if err != nil {
-		return "", "", err
-	}
-	if len(verses) > 0 {
-		return verses[0].Reference.Human, stripHTML(verses[0].Content), nil
+		return "", strings.Join(textParts, " "), nil
 	}
 	return "", "", fmt.Errorf("verse not found in page")
 }
@@ -333,9 +332,8 @@ func enrichHighlight(yva, userID string, lastPage int) (*enrichedHighlight, erro
 		color = m.KindColor
 	}
 
-	passageRef, text, err := fetchVerseText(yva, ref.VersionID, allUSFMs)
+	_, text, err := fetchVerseText(yva, ref.VersionID, allUSFMs)
 	if err != nil {
-		passageRef = humanRef
 		text = ""
 	}
 
@@ -348,7 +346,7 @@ func enrichHighlight(yva, userID string, lastPage int) (*enrichedHighlight, erro
 		PassageID:   usfm,
 		VersionID:   ref.VersionID,
 		Color:       color,
-		Reference:   passageRef,
+		Reference:   humanRef,
 		Translation: translation,
 		Text:        text,
 		Date:        date,

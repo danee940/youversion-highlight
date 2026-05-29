@@ -160,7 +160,7 @@
   <div class="container">
     <h1>My Highlights</h1>
     <div id="card">
-      <div id="placeholder">Press the button to get a random highlight.</div>
+      <div id="placeholder">Press the button or spacebar to get a random highlight.</div>
       <div id="verse-text" style="display:none"></div>
       <div id="verse-ref" style="display:none"></div>
       <div id="verse-date" style="display:none"></div>
@@ -234,6 +234,13 @@
         }
       } catch { }
     }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target === document.body) {
+        e.preventDefault();
+        loadRandom();
+      }
+    });
 
     loadStatus();
   </script>
