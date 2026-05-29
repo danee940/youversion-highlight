@@ -198,9 +198,45 @@ type nextData struct {
 var nextDataRe = regexp.MustCompile(`(?s)<script id="__NEXT_DATA__" type="application/json">(.+?)</script>`)
 var verseOpenRe = regexp.MustCompile(`<span class="verse[^"]*" data-usfm="([^"]+)"[^>]*>`)
 var labelRe = regexp.MustCompile(`(?s)<span class="label">[^<]*`)
+var noteOpenRe = regexp.MustCompile(`<span class="note[^"]*"[^>]*>`)
+var sectionHeadingRe = regexp.MustCompile(`(?s)<div class="s"[^>]*>.*?</div>`)
+
+func removeNestedSpans(s string, openRe *regexp.Regexp) string {
+	var result strings.Builder
+	for {
+		loc := openRe.FindStringIndex(s)
+		if loc == nil {
+			result.WriteString(s)
+			break
+		}
+		result.WriteString(s[:loc[0]])
+		rest := s[loc[1]:]
+		depth := 1
+		i := 0
+		for i < len(rest) && depth > 0 {
+			if strings.HasPrefix(rest[i:], "</span>") {
+				depth--
+				if depth == 0 {
+					i += len("</span>")
+					break
+				}
+				i += len("</span>")
+			} else if strings.HasPrefix(rest[i:], "<span") {
+				depth++
+				i += len("<span")
+			} else {
+				i++
+			}
+		}
+		s = rest[i:]
+	}
+	return result.String()
+}
 
 func parseVersesFromHTML(content string) []nextDataVerse {
 	content = html.UnescapeString(content)
+	content = sectionHeadingRe.ReplaceAllString(content, "")
+	content = removeNestedSpans(content, noteOpenRe)
 
 	indices := verseOpenRe.FindAllStringSubmatchIndex(content, -1)
 

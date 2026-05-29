@@ -115,6 +115,51 @@ func TestParseVersesFromHTML_htmlEntitiesDecoded(t *testing.T) {
 	}
 }
 
+func TestParseVersesFromHTML_stripsNoteSpans(t *testing.T) {
+	content := `<span class="verse v1" data-usfm="HEB.12.1"><span class="label">1</span><span class="content">Main text</span><span class="note x"><span class="label">#</span><span class=" body">1Cor 9:24; Phil 3:12</span></span><span class="content">  </span></span>`
+	verses := parseVersesFromHTML(content)
+	if len(verses) != 1 {
+		t.Fatalf("expected 1 verse, got %d", len(verses))
+	}
+	if strings.Contains(verses[0].Content, "1Cor") || strings.Contains(verses[0].Content, "Phil") {
+		t.Errorf("Content %q still contains cross-reference text", verses[0].Content)
+	}
+	if !strings.Contains(verses[0].Content, "Main text") {
+		t.Errorf("Content %q missing expected verse text", verses[0].Content)
+	}
+}
+
+func TestParseVersesFromHTML_stripsSectionHeadings(t *testing.T) {
+	content := `<div class="s"><span class="heading">Section Title</span></div>` +
+		`<span class="verse v1" data-usfm="GEN.1.1"><span class="label">1</span><span class="content">In the beginning</span></span>`
+	verses := parseVersesFromHTML(content)
+	if len(verses) != 1 {
+		t.Fatalf("expected 1 verse, got %d", len(verses))
+	}
+	if strings.Contains(verses[0].Content, "Section Title") {
+		t.Errorf("Content %q contains section heading text", verses[0].Content)
+	}
+}
+
+func TestRemoveNestedSpans_removesMatchingSpan(t *testing.T) {
+	input := `before<span class="note x"><span class="label">#</span><span class="body">ref</span></span>after`
+	got := removeNestedSpans(input, noteOpenRe)
+	if strings.Contains(got, "ref") || strings.Contains(got, "label") {
+		t.Errorf("removeNestedSpans still contains note content: %q", got)
+	}
+	if !strings.Contains(got, "before") || !strings.Contains(got, "after") {
+		t.Errorf("removeNestedSpans removed surrounding content: %q", got)
+	}
+}
+
+func TestRemoveNestedSpans_noMatch(t *testing.T) {
+	input := `<span class="content">hello</span>`
+	got := removeNestedSpans(input, noteOpenRe)
+	if got != input {
+		t.Errorf("removeNestedSpans modified non-matching input: %q", got)
+	}
+}
+
 func TestTokenState_setAndGet(t *testing.T) {
 	s := &tokenState{}
 	exp := time.Now().Add(time.Hour)
