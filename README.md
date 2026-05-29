@@ -6,7 +6,7 @@ A personal web app that surfaces random Bible verse highlights from your [YouVer
 
 ## How it works
 
-Fetches your highlights from the YouVersion API and displays a random one each time you click the button. The verse text is scraped from bible.com and the highlight color is preserved as a card accent.
+It works by spoofing Android app headers to access YouVersion's internal mobile API, then extracts verse text from the `__NEXT_DATA__` JSON that Next.js embeds in bible.com pages. Displays a random highlight each time you click the button, preserving the original highlight color as a card accent.
 
 ## Setup
 
@@ -27,6 +27,10 @@ go run .
 ```
 
 Then open [http://localhost:8080](http://localhost:8080).
+
+## Export
+
+All highlights can be exported as a Markdown file via `/api/export`.
 
 ## Token refresh
 
